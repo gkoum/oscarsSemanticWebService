@@ -134,6 +134,49 @@ The agent:
 7. Calls `/map` to resolve PANET terms such as `PaNET01196` to ESRFET terms.
 8. Asks whether to proceed with the mapped ESRFET term before searching the ESRF example service.
 
+## Future Agent Flow Diagram
+
+![Semantic experiment finder agent flow](docs/agent-flow.svg)
+![Semantic experiment finder search flow](docs/semantic-search-flow.png)
+
+This diagram shows the intended end-state flow. In the real application, the agent continues with whichever synchrotron the user selects, discovers that facility's semantic contract, maps vocabularies when needed, and searches the selected backend. The diagram source is also kept as Mermaid in [docs/agent-flow.mmd](docs/agent-flow.mmd).
+
+```mermaid
+flowchart TD
+    A(["Start semantic experiment agent"]) --> B["Show available facilities<br/>ESRF, Diamond, MAX IV, ..."]
+    B --> C["User selects a synchrotron"]
+    C --> D["Fetch selected facility OpenAPI<br/>or semantic service profile"]
+    D --> E{"Semantic annotations<br/>available?"}
+    E -- "No" --> E1["Use facility adapter, cached profile,<br/>or ask for manual parameter mapping"]
+    E1 --> F
+    E -- "Yes" --> F["Discover endpoint capabilities<br/>supported ontologies, query params,<br/>date semantics, instrument semantics"]
+    F --> G["Explain discovered contract<br/>Example ESRF: techniquePids speaks ESRFET"]
+    G --> H{"User term vocabulary?"}
+    H -- "Native facility vocabulary" --> I["Normalize term for selected facility<br/>Example ESRFET:XAS"]
+    H -- "External vocabulary<br/>e.g. PaNET" --> J["Call mapping service<br/>source vocabulary to facility vocabulary"]
+    J --> K{"Mapping result?"}
+    K -- "No mapping" --> K1["Ask for another term,<br/>broaden concept, or stop"]
+    K -- "Multiple mappings" --> K2["Explain candidates and relations<br/>exact, close, broader, narrower"]
+    K2 --> K3["User selects mapping"]
+    K -- "Single mapping" --> L["Show mapped facility term<br/>Example PaNET01196 to ESRFET:XAS"]
+    K3 --> L
+    L --> M{"Proceed with mapped term?"}
+    M -- "No" --> M1["Cancel or revise query"]
+    M -- "Yes" --> N["Collect search filters<br/>date range, beamline/instrument,<br/>optional keywords"]
+    I --> N
+    N --> O["Build facility-specific request<br/>only supported query params are sent"]
+    O --> P{"Search backend"}
+    P -- "Semantic local facade" --> Q["Call local semantic endpoint"]
+    P -- "Real facility API" --> R["Call selected synchrotron API<br/>Example ESRF ICAT+ proxy"]
+    P -- "Federated mode" --> S["Run same semantic intent<br/>across compatible facilities"]
+    Q --> T{"Search successful?"}
+    R --> T
+    S --> T
+    T -- "Upstream error" --> T1["Report facility error<br/>keep query and mapping context"]
+    T -- "No results" --> T2["Suggest broader dates,<br/>related techniques, or other beamlines"]
+    T -- "Results found" --> U["Return annotated experiments<br/>engine can manipulate fields by ontology"]
+```
+
 By default, the mapping service is expected at:
 
 ```text
@@ -155,11 +198,11 @@ GET /map?source=PANET&target=ESRFET&term=<PANET_TERM>
 Accepted response shapes include:
 
 ```json
-{"targetTerm": "http://purl.org/pan-science/ESRFET#XAS"}
+{ "targetTerm": "http://purl.org/pan-science/ESRFET#XAS" }
 ```
 
 or:
 
 ```json
-{"mappings": [{"targetTerm": "http://purl.org/pan-science/ESRFET#XAS"}]}
+{ "mappings": [{ "targetTerm": "http://purl.org/pan-science/ESRFET#XAS" }] }
 ```
