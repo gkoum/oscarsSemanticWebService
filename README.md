@@ -137,7 +137,6 @@ The agent:
 ## Future Agent Flow Diagram
 
 ![Semantic experiment finder agent flow](docs/agent-flow.svg)
-![Semantic experiment finder search flow](docs/semantic-search-flow.png)
 
 This diagram shows the intended end-state flow. In the real application, the agent continues with whichever synchrotron the user selects, discovers that facility's semantic contract, maps vocabularies when needed, and searches the selected backend. The diagram source is also kept as Mermaid in [docs/agent-flow.mmd](docs/agent-flow.mmd).
 
